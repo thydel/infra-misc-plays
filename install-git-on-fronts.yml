@@ -1,0 +1,49 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- hosts: localhost
+  gather_facts: False
+  roles: [ hg_commit ]
+
+- hosts: front:!impact
+  gather_facts: False
+
+  tasks:
+
+    - command: git config --get user.email
+      register: user
+      changed_when: False
+      check_mode: False
+      delegate_to: localhost
+      name: Get user email
+
+    - block:
+      - hg_commit:
+          cwd: /etc
+          addremove: True
+          comment: Before installing git
+          user: '{{ user.stdout }}'
+        register: before
+        name: Commit /etc if unclean
+      - debug: { var: hg_commit.status }
+        when: before.changed
+      become: True
+
+    - apt:
+        name: git
+      become: True
+      name: Install git
+
+    - block:
+      - hg_commit:
+          cwd: /etc
+          addremove: True
+          comment: After installing git
+          user: '{{ user.stdout }}'
+        register: after
+        name: Commit /etc if any changes
+      - block:
+        - debug: { var: hg_commit.status }
+        - debug: { var: hg_commit.id }
+        when: after.changed
+      become: True

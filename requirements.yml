@@ -1,0 +1,4 @@
+---
+- src: https://github.com/thyepi/ansible-hg-modules.git
+  name: hg_commit
+...
