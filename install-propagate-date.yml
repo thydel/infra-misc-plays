@@ -1,0 +1,22 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- hosts: mysql
+  gather_facts: False
+
+  tasks:
+
+    - git:
+        repo: https://github.com/thydel/propagate-date.git
+        dest: ext/propagate-date
+      delegate_to: localhost
+      tags: git
+      name: get propagate-date
+
+    - copy:
+        src: ext/propagate-date/propagate-date.pl
+        dest: /usr/local/bin
+        mode: 0555
+      become: True
+      tags: copy
+      name: copy propagate-date
