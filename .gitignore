@@ -17,3 +17,4 @@ plugins/filter/*.pyc
 ssh-config
 vars/ext/
 inventory/*.ext
+inventory/group_vars/*/*-ext.yml

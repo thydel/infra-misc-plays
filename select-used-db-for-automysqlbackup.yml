@@ -1,0 +1,80 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- hosts: old_automysqlbackup
+  gather_facts: False
+
+  vars:
+    ndays: 100
+
+  tasks:
+
+    - block:
+
+      - command: propagate-date.pl --noexec -v -u {{ mysql_datadir }}
+        check_mode: False
+        changed_when: False
+        register: date
+        name: Propagates date noexec
+
+      - debug: { var: date.stdout_lines }
+        when: ansible_check_mode
+        name: Shows date propagation
+
+      - command: propagate-date.pl -v -u {{ mysql_datadir }}
+        when: not ansible_check_mode
+        name: Propagates date
+
+      become: True
+      tags: date
+
+    - block:
+
+      - command: find {{ mysql_datadir }} -mindepth 1 -maxdepth 1 -type d -mtime -{{ ndays }}
+        register: find
+        check_mode: False
+        changed_when: False
+        name: Finds DBs used in last {{ ndays }} days
+      
+      - command: ls -lstd {{ find.stdout }}
+        register: ls
+        check_mode: False
+        changed_when: False
+        when: ansible_check_mode
+        name: Looks for DB folder attributes sortded by most recent
+      
+      - debug: { var: ls.stdout_lines }
+        when: ansible_check_mode
+        name: Shows DB folders
+
+      - copy:
+          content: |
+            {{ { 'used_dbs': find.stdout_lines | map('basename') | list | difference(automysqlbackup_dbexclude) } | to_nice_yaml }}
+          dest: tmp/{{ inventory_hostname }}-used-dbs.yml
+        delegate_to: localhost
+        name: Save list of DBs used in last {{ ndays }} days
+
+      become: True
+      tags: find
+
+    - block:
+
+      - include_vars:
+          file: tmp/{{ inventory_hostname }}-used-dbs.yml
+
+      - replace:
+          dest: '{{ automysqlbackup_path }}'
+          regexp: '^(DBNAMES="all")'
+          replace: '#\1'
+        name: Comment out orig DBNAMES var
+
+      - lineinfile:
+          dest: '{{ automysqlbackup_path }}'
+          insertafter: '^#DBNAMES="all"'
+          regexp: '^DBNAMES="(.*)"'
+          line: |
+            DBNAMES="{{ used_dbs | join(' ') }}"
+        name: Set a new DBNAMES var
+
+      become: True
+      tags: edit
