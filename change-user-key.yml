@@ -1,0 +1,45 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- hosts: all
+  gather_facts: False
+  name: Makes a group from nodes where {{ user }} have an account
+
+  vars:
+    update_state: dont_need_update
+
+  tasks:
+
+    - command: getent passwd {{ user }}
+      register: getent
+      failed_when: getent.rc not in [0, 2]
+      changed_when: False
+      check_mode: False
+
+    - set_fact:
+        update_state: need_update
+      when: getent.rc == 0
+      check_mode: False
+       
+    - group_by:
+        key: '{{ update_state }}'
+
+- hosts: need_update
+  gather_facts: False
+  name: Change keys of {{ user }}
+  
+  vars_files:
+    - vars/ext/user_accounts.yml
+
+  tasks:
+
+    - set_fact:
+        keys: '{{ user_accounts_login[user].ssh_keys }}'
+
+    - authorized_key:
+        user: '{{ user }}'
+        key: '{{ item }}'
+      with_items: '{{ keys }}'
+      loop_control:
+        label: '{{ item.split()[-1] }}'
+      become: True
