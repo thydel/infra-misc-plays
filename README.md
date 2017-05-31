@@ -1,5 +1,7 @@
 # infra-misc-plays
 
+## obsolet setup
+
 - Basic setup was made using [init-play-dir.yml](init-play-dir.yml)
 
 ```bash
@@ -21,12 +23,28 @@ curl -s $gist/$user/$gistid/raw > $file; chmod +x $file;
 
 - Run `ansible.mk help` to get hints on `ansible` (and `pass`) setup
 
+## new way setup
+
+- Basic setup is no more self contained. Use
+  [helpers](https://github.com/thydel/helpers)
+
+```bash
+helper init-play-dir # dry run
+helper run init-play-dir
+helper ansible
+```
+
+## after basic setup, get private data
+
 - Choose the `data_version` to use in [infra-data.yml](infra-data.yml)
 
 - Run `infra-data.yml` to populate `inventory`, `ssh-config` and `var/ext`
 
+## then get roles
+
 - Run `ansible-galaxy install -r requirements.yml` to get required *roles*
+
+## and use your public playbooks
 
 - Run `install-git-on-fronts.yml` as an exemple to simple task with
   pre and post `hg commit`
-  

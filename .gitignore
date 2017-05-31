@@ -18,3 +18,12 @@ ssh-config
 vars/ext/
 inventory/*.ext
 inventory/group_vars/*/*-ext.yml
+.cache
+.retry
+.hide
+roles
+log
+tmp
+ext
+ansible.cfg
+vault-pass.py
