@@ -58,6 +58,7 @@
         mode: 0444
       with_items:
         - group_vars
+        - poweroff
 
       name: inventory
 

@@ -27,3 +27,7 @@ tmp
 ext
 ansible.cfg
 vault-pass.py
+.adam
+gh-md-toc
+*.html
+*-toc.md

@@ -5,7 +5,7 @@
   gather_facts: False
   roles: [ hg_commit ]
 
-- hosts: front:!impact
+- hosts: 'g_front:!g_old:!poweroff'
   gather_facts: False
 
   tasks:
