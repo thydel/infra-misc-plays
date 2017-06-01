@@ -1,0 +1,80 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- hosts: localhost
+  gather_facts: False
+  roles: [ hg_commit ]
+
+- hosts: 'g_front:!g_old:!poweroff'
+  gather_facts: True
+
+  tasks:
+
+    
+    - set_fact: { user: '{{ ansible_user | default(ansible_env.USER) }}' }
+      delegate_to: localost
+      run_once: True
+      name: Get user name
+      
+    - getent:
+        database: group
+        key: staff
+        split: ':'
+      name: Get staff group
+      
+    - assert:
+        that: user in (getent_group.staff | difference([0, 1] | map('extract', getent_group.staff) | list))
+      name: Assert that {{ user }} is in group staff
+
+    - git:
+        repo: https://github.com/thydel/misc-script
+        version: master
+        dest: '{{ ansible_env.HOME }}/usr/misc-script'
+      environment:
+        https_proxy: '{{ https_proxy }}'
+      name: Get misc-script repo
+    
+    - command: make -f apache-status.mk install
+      args:
+        chdir: usr/misc-script
+        creates: /usr/local/bin/apache-status.mk
+      name: Install apache-status from misc-script repo
+
+    - command: git config --get user.email
+      register: user
+      changed_when: False
+      check_mode: False
+      delegate_to: localhost
+      name: Get user email
+
+    - set_fact: { pkg_name: lynx }
+
+    - block:
+      - hg_commit:
+          cwd: /etc
+          addremove: True
+          comment: Before installing {{ pkg_name }}
+          user: '{{ user.stdout }}'
+        register: before
+        name: Commit /etc if unclean
+      - debug: { var: hg_commit.status }
+        when: before.changed
+      become: True
+
+    - apt: { name: '{{ pkg_name }}' }
+      become: True
+      name: Install {{ pkg_name }}
+
+    - block:
+      - hg_commit:
+          cwd: /etc
+          addremove: True
+          comment: After installing {{ pkg_name }}
+          user: '{{ user.stdout }}'
+        register: after
+        name: Commit /etc if any changes
+      - block:
+        - debug: { var: hg_commit.status }
+        - debug: { var: hg_commit.id }
+        when: after.changed
+      become: True

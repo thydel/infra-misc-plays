@@ -1,0 +1,56 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- hosts: localhost
+  gather_facts: False
+  roles: [ hg_commit ]
+
+- hosts: 'g_front:!g_old:!poweroff'
+  gather_facts: True
+
+  tasks:
+    
+    - set_fact: { user: '{{ ansible_user | default(ansible_env.USER) }}' }
+      delegate_to: localost
+      run_once: True
+      name: Get user name
+      
+    - command: git config --get user.email
+      register: user_email
+      changed_when: False
+      check_mode: False
+      delegate_to: localhost
+      name: Get user email
+
+    - block:
+      - hg_commit:
+          cwd: /etc
+          addremove: True
+          comment: Before adding {{ user }} to group staff
+          user: '{{ user_email.stdout }}'
+        register: before
+        name: Commit /etc if unclean
+      - debug: { var: hg_commit.status }
+        when: before.changed
+      become: True
+
+    - user:
+        user: '{{ user }}'
+        groups: [ staff ]
+        append: True
+      become: True
+      name: Add {{ user }} to group staff
+
+    - block:
+      - hg_commit:
+          cwd: /etc
+          addremove: True
+          comment: After adding {{ user }} to group staff
+          user: '{{ user_email.stdout }}'
+        register: after
+        name: Commit /etc if any changes
+      - block:
+        - debug: { var: hg_commit.status }
+        - debug: { var: hg_commit.id }
+        when: after.changed
+      become: True

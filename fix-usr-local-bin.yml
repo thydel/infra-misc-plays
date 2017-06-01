@@ -1,0 +1,12 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- hosts: 'g_front:!g_old:!poweroff'
+  gather_facts: True
+
+  tasks:
+
+    - file:
+        path: /usr/local/bin
+        group: staff
+      become: True
