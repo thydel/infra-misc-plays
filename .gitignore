@@ -31,3 +31,4 @@ vault-pass.py
 gh-md-toc
 *.html
 *-toc.md
+inventory/local
