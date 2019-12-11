@@ -32,3 +32,4 @@ gh-md-toc
 *.html
 *-toc.md
 inventory/local
+ansible_cfg
